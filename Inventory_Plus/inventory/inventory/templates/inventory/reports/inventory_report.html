@@ -1,0 +1,112 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Inventory Report - Inventory Plus{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-text"></i> Inventory Report</h2>
+    <div>
+        <a href="?export=csv" class="btn btn-success">
+            <i class="bi bi-download"></i> Export to CSV
+        </a>
+        <a href="{% url 'inventory:dashboard' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <h6 class="text-muted">Total Products</h6>
+            <h3>{{ products.count }}</h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <h6 class="text-muted">Total Value</h6>
+            <h3>${{ total_value|floatformat:2 }}</h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <h6 class="text-muted">Low Stock Items</h6>
+            <h3 class="text-warning">{{ low_stock_count }}</h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card text-center">
+            <h6 class="text-muted">Out of Stock</h6>
+            <h3 class="text-danger">{{ out_of_stock_count }}</h3>
+        </div>
+    </div>
+</div>
+
+<div class="table-container mb-4">
+    <h5 class="mb-3">Category Summary</h5>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Product Count</th>
+                    <th>Total Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for category in categories_data %}
+                <tr>
+                    <td>{{ category.name }}</td>
+                    <td>{{ category.product_count }}</td>
+                    <td>${{ category.total_value|default:0|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="table-container">
+    <h5 class="mb-3">Product Details</h5>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>SKU</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Unit Price</th>
+                    <th>Stock</th>
+                    <th>Total Value</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr>
+                    <td>{{ product.sku }}</td>
+                    <td>{{ product.name }}</td>
+                    <td>{{ product.category.name|default:"-" }}</td>
+                    <td>${{ product.unit_price }}</td>
+                    <td>{{ product.quantity_in_stock }}</td>
+                    <td>${{ product.get_total_value|floatformat:2 }}</td>
+                    <td>
+                        {% if product.get_stock_status == 'Out of Stock' %}
+                            <span class="badge badge-out-stock">Out of Stock</span>
+                        {% elif product.get_stock_status == 'Low Stock' %}
+                            <span class="badge badge-low-stock">Low Stock</span>
+                        {% else %}
+                            <span class="badge badge-in-stock">In Stock</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="text-muted text-center mt-4">
+    <small>Report generated on {{ report_date|date:"F d, Y H:i" }}</small>
+</div>
+{% endblock %}

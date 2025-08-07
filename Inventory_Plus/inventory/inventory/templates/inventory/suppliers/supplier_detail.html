@@ -1,0 +1,147 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}{{ supplier.name }} - Inventory Plus{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-truck"></i> Supplier Details</h2>
+    <div>
+        {% if user.is_admin_user %}
+        <a href="{% url 'inventory:supplier_update' supplier.pk %}" class="btn btn-warning">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+        <a href="{% url 'inventory:supplier_delete' supplier.pk %}" class="btn btn-danger">
+            <i class="bi bi-trash"></i> Delete
+        </a>
+        {% endif %}
+        <a href="{% url 'inventory:supplier_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="table-container mb-4">
+            <h5 class="mb-3">Supplier Information</h5>
+            <table class="table">
+                <tr>
+                    <th width="35%">Company Name</th>
+                    <td>{{ supplier.name }}</td>
+                </tr>
+                <tr>
+                    <th>Email</th>
+                    <td><a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a></td>
+                </tr>
+                <tr>
+                    <th>Phone Number</th>
+                    <td>{{ supplier.phone_number }}</td>
+                </tr>
+                <tr>
+                    <th>Website</th>
+                    <td>
+                        {% if supplier.website %}
+                            <a href="{{ supplier.website }}" target="_blank">{{ supplier.website }}</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Address</th>
+                    <td>{{ supplier.address }}</td>
+                </tr>
+                <tr>
+                    <th>City</th>
+                    <td>{{ supplier.city }}</td>
+                </tr>
+                <tr>
+                    <th>Country</th>
+                    <td>{{ supplier.country }}</td>
+                </tr>
+                <tr>
+                    <th>Member Since</th>
+                    <td>{{ supplier.created_at|date:"M d, Y" }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="stat-card text-center mb-4">
+            <h5 class="mb-3">Statistics</h5>
+            <div class="row">
+                <div class="col-6">
+                    <div class="display-4 text-primary">{{ products.count }}</div>
+                    <p class="text-muted">Total Products</p>
+                </div>
+                <div class="col-6">
+                    <div class="display-4 text-success">
+                        {{ products|length }}
+                    </div>
+                    <p class="text-muted">Active Products</p>
+                </div>
+            </div>
+        </div>
+        
+        {% if supplier.logo %}
+        <div class="table-container text-center">
+            <h5 class="mb-3">Company Logo</h5>
+            <img src="{{ supplier.logo.url }}" alt="{{ supplier.name }} Logo" class="img-fluid" style="max-height: 150px;">
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="table-container">
+    <h5 class="mb-3">Products Supplied</h5>
+    {% if products %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>SKU</th>
+                        <th>Product Name</th>
+                        <th>Category</th>
+                        <th>Unit Price</th>
+                        <th>Current Stock</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>{{ product.sku }}</td>
+                        <td>
+                            <a href="{% url 'inventory:product_detail' product.pk %}">
+                                {{ product.name }}
+                            </a>
+                        </td>
+                        <td>{{ product.category.name|default:"-" }}</td>
+                        <td>${{ product.unit_price }}</td>
+                        <td>{{ product.quantity_in_stock }}</td>
+                        <td>
+                            {% if product.get_stock_status == 'Out of Stock' %}
+                                <span class="badge badge-out-stock">Out of Stock</span>
+                            {% elif product.get_stock_status == 'Low Stock' %}
+                                <span class="badge badge-low-stock">Low Stock</span>
+                            {% else %}
+                                <span class="badge badge-in-stock">In Stock</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'inventory:product_detail' product.pk %}" class="btn btn-sm btn-info">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">No products from this supplier yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

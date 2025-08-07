@@ -1,0 +1,220 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Dashboard - Inventory Plus{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+    <span class="text-muted">Welcome, {{ user.get_full_name|default:user.username }}!</span>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stat-card text-center">
+            <div class="display-4 text-primary mb-2">
+                <i class="bi bi-box"></i>
+            </div>
+            <h3 class="mb-0">{{ total_products }}</h3>
+            <p class="text-muted mb-0">Total Products</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card text-center">
+            <div class="display-4 text-success mb-2">
+                <i class="bi bi-tags"></i>
+            </div>
+            <h3 class="mb-0">{{ total_categories }}</h3>
+            <p class="text-muted mb-0">Categories</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card text-center">
+            <div class="display-4 text-info mb-2">
+                <i class="bi bi-truck"></i>
+            </div>
+            <h3 class="mb-0">{{ total_suppliers }}</h3>
+            <p class="text-muted mb-0">Suppliers</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card text-center">
+            <div class="display-4 text-danger mb-2">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <h3 class="mb-0">{{ low_stock_products }}</h3>
+            <p class="text-muted mb-0">Low Stock Items</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="table-container">
+            <h5 class="mb-3">
+                <i class="bi bi-exclamation-circle text-warning"></i> Low Stock Alerts
+            </h5>
+            {% if low_stock_items %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Current Stock</th>
+                                <th>Reorder Level</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in low_stock_items %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'inventory:product_detail' product.pk %}">
+                                        {{ product.name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge badge-low-stock">{{ product.quantity_in_stock }}</span>
+                                </td>
+                                <td>{{ product.reorder_level }}</td>
+                                <td>
+                                    <a href="{% url 'inventory:update_stock' product.pk %}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-plus-circle"></i> Update
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted">No low stock items at the moment.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="table-container">
+            <h5 class="mb-3">
+                <i class="bi bi-clock-history text-info"></i> Recent Stock Movements
+            </h5>
+            {% if recent_movements %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Type</th>
+                                <th>Quantity</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for movement in recent_movements %}
+                            <tr>
+                                <td>{{ movement.product.name }}</td>
+                                <td>
+                                    {% if movement.movement_type == 'in' %}
+                                        <span class="badge bg-success">Stock In</span>
+                                    {% elif movement.movement_type == 'out' %}
+                                        <span class="badge bg-danger">Stock Out</span>
+                                    {% else %}
+                                        <span class="badge bg-info">Adjustment</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ movement.quantity }}</td>
+                                <td>{{ movement.created_at|date:"M d, H:i" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted">No recent stock movements.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if user.is_admin_user and expiring_products %}
+<div class="row">
+    <div class="col-12">
+        <div class="table-container">
+            <h5 class="mb-3">
+                <i class="bi bi-calendar-x text-danger"></i> Expiring Products Alert
+            </h5>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Expiry Date</th>
+                            <th>Days Until Expiry</th>
+                            <th>Current Stock</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in expiring_products %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'inventory:product_detail' product.pk %}">
+                                    {{ product.name }}
+                                </a>
+                            </td>
+                            <td>{{ product.expiry_date|date:"M d, Y" }}</td>
+                            <td>
+                                {% with days_left=product.expiry_date|timeuntil %}
+                                    <span class="badge bg-danger">{{ days_left }}</span>
+                                {% endwith %}
+                            </td>
+                            <td>{{ product.quantity_in_stock }}</td>
+                            <td>
+                                <a href="{% url 'inventory:product_update' product.pk %}" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil"></i> Update
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="table-container">
+            <h5 class="mb-3">Quick Actions</h5>
+            <div class="row">
+                <div class="col-md-3 mb-2">
+                    <a href="{% url 'inventory:product_create' %}" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-circle"></i> Add Product
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="{% url 'inventory:inventory_report' %}" class="btn btn-info w-100">
+                        <i class="bi bi-file-earmark-text"></i> Inventory Report
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="{% url 'inventory:export_products' %}" class="btn btn-success w-100">
+                        <i class="bi bi-download"></i> Export Products
+                    </a>
+                </div>
+                {% if user.is_admin_user %}
+                <div class="col-md-3 mb-2">
+                    <a href="{% url 'inventory:import_products' %}" class="btn btn-warning w-100">
+                        <i class="bi bi-upload"></i> Import Products
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

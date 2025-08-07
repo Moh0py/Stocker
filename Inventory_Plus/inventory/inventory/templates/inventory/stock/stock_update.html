@@ -1,0 +1,50 @@
+{% extends 'inventory/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Update Stock - {{ product.name }} - Inventory Plus{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="table-container">
+            <h3 class="mb-4">
+                <i class="bi bi-arrow-up-down"></i> Update Stock
+            </h3>
+            
+            <div class="alert alert-info mb-4">
+                <h5>{{ product.name }}</h5>
+                <p class="mb-1">SKU: {{ product.sku }}</p>
+                <p class="mb-0">Current Stock: <strong>{{ product.quantity_in_stock }}</strong> units</p>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    {{ form.movement_type|as_crispy_field }}
+                </div>
+                
+                <div class="mb-3">
+                    {{ form.quantity|as_crispy_field }}
+                    <small class="form-text text-muted">
+                        Enter the quantity to add, remove, or set as total stock
+                    </small>
+                </div>
+                
+                <div class="mb-3">
+                    {{ form.reason|as_crispy_field }}
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'inventory:product_detail' product.pk %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Update Stock
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

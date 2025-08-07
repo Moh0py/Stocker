@@ -16,9 +16,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'inventory_plus',  
-    'inventory',       
-]
+    'inventory',
+    'accounts',  
+]      
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -30,7 +31,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'inventory_plus.urls'
+ROOT_URLCONF = 'Inventory_Plus.urls'
 
 TEMPLATES = [
     {
@@ -48,7 +49,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'inventory_plus.wsgi.application'
+WSGI_APPLICATION = 'Inventory_Plus.wsgi.application'
 
 DATABASES = {
     'default': {
