@@ -17,7 +17,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'inventory',
-    'accounts',  
+    'accounts',
+    'crispy_forms',
+    'crispy_bootstrap5',  
 ]      
 
 
@@ -36,8 +38,10 @@ ROOT_URLCONF = 'Inventory_Plus.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
+        'DIRS': [
+            BASE_DIR / 'templates', 
+        ],
+        'APP_DIRS': True, 
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -48,7 +52,6 @@ TEMPLATES = [
         },
     },
 ]
-
 WSGI_APPLICATION = 'Inventory_Plus.wsgi.application'
 
 DATABASES = {

@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum, Count, F
 from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
@@ -13,20 +13,25 @@ from .utils import send_low_stock_alert, send_expiry_alert, export_to_csv, impor
 import csv
 from datetime import datetime, timedelta
 
+
+
+
+
 def is_admin(user):
-    return user.is_authenticated and user.user_type == 'admin'
+    return user.is_authenticated and (user.is_superuser or user.is_staff)
 
 @login_required
 def dashboard(request):
     total_products = Product.objects.count()
     total_categories = Category.objects.count()
     total_suppliers = Supplier.objects.count()
-    low_stock_products = Product.objects.filter(quantity_in_stock__lte=models.F('reorder_level')).count()
+    low_stock_products = Product.objects.filter(quantity_in_stock__lte=F('reorder_level')).count()
     
     recent_movements = StockMovement.objects.select_related('product', 'performed_by')[:10]
-    low_stock_items = Product.objects.filter(quantity_in_stock__lte=models.F('reorder_level'))[:5]
+    low_stock_items = Product.objects.filter(quantity_in_stock__lte=F('reorder_level'))[:5]
     
-    if request.user.is_admin_user():
+    # Check if user is admin (staff or superuser)
+    if request.user.is_staff or request.user.is_superuser:
         expiring_products = Product.objects.filter(
             is_perishable=True,
             expiry_date__lte=datetime.now().date() + timedelta(days=7)
@@ -47,7 +52,7 @@ def dashboard(request):
 
 class ProductListView(LoginRequiredMixin, ListView):
     model = Product
-    template_name = 'inventory/products/product_list.html'
+    template_name = 'products/product_list.html'
     context_object_name = 'products'
     paginate_by = 10
     
@@ -78,7 +83,7 @@ class ProductListView(LoginRequiredMixin, ListView):
 
 class ProductDetailView(LoginRequiredMixin, DetailView):
     model = Product
-    template_name = 'inventory/products/product_detail.html'
+    template_name = 'products/product_detail.html'
     context_object_name = 'product'
     
     def get_context_data(self, **kwargs):
@@ -89,7 +94,7 @@ class ProductDetailView(LoginRequiredMixin, DetailView):
 class ProductCreateView(LoginRequiredMixin, CreateView):
     model = Product
     form_class = ProductForm
-    template_name = 'inventory/products/product_form.html'
+    template_name = 'products/product_form.html'
     success_url = reverse_lazy('inventory:product_list')
     
     def form_valid(self, form):
@@ -100,7 +105,7 @@ class ProductCreateView(LoginRequiredMixin, CreateView):
 class ProductUpdateView(LoginRequiredMixin, UpdateView):
     model = Product
     form_class = ProductForm
-    template_name = 'inventory/products/product_form.html'
+    template_name = 'products/product_form.html'
     success_url = reverse_lazy('inventory:product_list')
     
     def form_valid(self, form):
@@ -109,11 +114,11 @@ class ProductUpdateView(LoginRequiredMixin, UpdateView):
 
 class ProductDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Product
-    template_name = 'inventory/products/product_confirm_delete.html'
+    template_name = 'products/product_confirm_delete.html'
     success_url = reverse_lazy('inventory:product_list')
     
     def test_func(self):
-        return self.request.user.is_admin_user()
+        return self.request.user.is_staff or self.request.user.is_superuser
     
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Product deleted successfully!')
@@ -165,18 +170,18 @@ def update_stock(request, pk):
 
 class CategoryListView(LoginRequiredMixin, ListView):
     model = Category
-    template_name = 'inventory/categories/category_list.html'
+    template_name = 'categories/category_list.html'
     context_object_name = 'categories'
     paginate_by = 10
 
 class CategoryCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = Category
     form_class = CategoryForm
-    template_name = 'inventory/categories/category_form.html'
+    template_name = 'categories/category_form.html'
     success_url = reverse_lazy('inventory:category_list')
     
     def test_func(self):
-        return self.request.user.is_admin_user()
+        return self.request.user.is_staff or self.request.user.is_superuser
     
     def form_valid(self, form):
         messages.success(self.request, 'Category created successfully!')
@@ -185,11 +190,11 @@ class CategoryCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
 class CategoryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Category
     form_class = CategoryForm
-    template_name = 'inventory/categories/category_form.html'
+    template_name = 'categories/category_form.html'
     success_url = reverse_lazy('inventory:category_list')
     
     def test_func(self):
-        return self.request.user.is_admin_user()
+        return self.request.user.is_staff or self.request.user.is_superuser
     
     def form_valid(self, form):
         messages.success(self.request, 'Category updated successfully!')
@@ -197,11 +202,11 @@ class CategoryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
 class CategoryDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Category
-    template_name = 'inventory/categories/category_confirm_delete.html'
+    template_name = 'categories/category_confirm_delete.html'
     success_url = reverse_lazy('inventory:category_list')
     
     def test_func(self):
-        return self.request.user.is_admin_user()
+        return self.request.user.is_staff or self.request.user.is_superuser
     
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Category deleted successfully!')
@@ -209,13 +214,13 @@ class CategoryDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
 class SupplierListView(LoginRequiredMixin, ListView):
     model = Supplier
-    template_name = 'inventory/suppliers/supplier_list.html'
+    template_name = 'suppliers/supplier_list.html'
     context_object_name = 'suppliers'
     paginate_by = 10
 
 class SupplierDetailView(LoginRequiredMixin, DetailView):
     model = Supplier
-    template_name = 'inventory/suppliers/supplier_detail.html'
+    template_name = 'suppliers/supplier_detail.html'
     context_object_name = 'supplier'
     
     def get_context_data(self, **kwargs):
@@ -226,11 +231,11 @@ class SupplierDetailView(LoginRequiredMixin, DetailView):
 class SupplierCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = Supplier
     form_class = SupplierForm
-    template_name = 'inventory/suppliers/supplier_form.html'
+    template_name = 'suppliers/supplier_form.html'
     success_url = reverse_lazy('inventory:supplier_list')
     
     def test_func(self):
-        return self.request.user.is_admin_user()
+        return self.request.user.is_staff or self.request.user.is_superuser
     
     def form_valid(self, form):
         messages.success(self.request, 'Supplier created successfully!')
@@ -239,11 +244,11 @@ class SupplierCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
 class SupplierUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Supplier
     form_class = SupplierForm
-    template_name = 'inventory/suppliers/supplier_form.html'
+    template_name = 'suppliers/supplier_form.html'
     success_url = reverse_lazy('inventory:supplier_list')
     
     def test_func(self):
-        return self.request.user.is_admin_user()
+        return self.request.user.is_staff or self.request.user.is_superuser
     
     def form_valid(self, form):
         messages.success(self.request, 'Supplier updated successfully!')
@@ -251,11 +256,11 @@ class SupplierUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
 class SupplierDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Supplier
-    template_name = 'inventory/suppliers/supplier_confirm_delete.html'
+    template_name = 'suppliers/supplier_confirm_delete.html'
     success_url = reverse_lazy('inventory:supplier_list')
     
     def test_func(self):
-        return self.request.user.is_admin_user()
+        return self.request.user.is_staff or self.request.user.is_superuser
     
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Supplier deleted successfully!')
@@ -265,12 +270,12 @@ class SupplierDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 def inventory_report(request):
     products = Product.objects.select_related('category').prefetch_related('suppliers')
     total_value = sum(p.get_total_value() for p in products)
-    low_stock_count = products.filter(quantity_in_stock__lte=models.F('reorder_level')).count()
+    low_stock_count = products.filter(quantity_in_stock__lte=F('reorder_level')).count()
     out_of_stock_count = products.filter(quantity_in_stock=0).count()
     
     categories_data = Category.objects.annotate(
         product_count=Count('products'),
-        total_value=Sum(models.F('products__quantity_in_stock') * models.F('products__unit_price'))
+        total_value=Sum(F('products__quantity_in_stock') * F('products__unit_price'))
     )
     
     context = {
@@ -285,14 +290,14 @@ def inventory_report(request):
     if request.GET.get('export') == 'csv':
         return export_to_csv(products, 'inventory_report')
     
-    return render(request, 'inventory/reports/inventory_report.html', context)
+    return render(request, 'reports/inventory_report.html', context)
 
 @login_required
 def supplier_report(request):
     suppliers = Supplier.objects.annotate(
         product_count=Count('products'),
         total_products_value=Sum(
-            models.F('products__quantity_in_stock') * models.F('products__unit_price')
+            F('products__quantity_in_stock') * F('products__unit_price')
         )
     )
     
@@ -319,7 +324,7 @@ def supplier_report(request):
         
         return response
     
-    return render(request, 'inventory/reports/supplier_report.html', context)
+    return render(request, 'reports/supplier_report.html', context)
 
 @login_required
 @user_passes_test(is_admin)
@@ -337,7 +342,7 @@ def import_products(request):
     else:
         form = ImportForm()
     
-    return render(request, 'inventory/products/import.html', {'form': form})
+    return render(request, 'products/import.html', {'form': form})
 
 @login_required
 def export_products(request):
