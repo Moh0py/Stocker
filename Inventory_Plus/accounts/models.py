@@ -35,3 +35,34 @@ class User(AbstractUser):
         db_table = 'accounts_user'
         verbose_name = 'User'
         verbose_name_plural = 'Users'
+
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    about = models.TextField(blank=True)
+    avatar = models.ImageField(upload_to="images/avatars/", default="images/avatars/avatar.webp")
+    department = models.CharField(max_length=100, blank=True, verbose_name='القسم')
+    employee_id = models.CharField(max_length=50, blank=True, unique=True, null=True, verbose_name='رقم الموظف')
+    
+    def __str__(self) -> str:
+        return f"Profile {self.user.username}"
+    
+    class Meta:
+        verbose_name = 'Profile'
+        verbose_name_plural = 'Profiles'
+
+
+class Bookmark(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    product = models.ForeignKey('inventory.Product', on_delete=models.CASCADE)
+    
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.product.name}"
+    
+    class Meta:
+        verbose_name = 'Bookmark'
+        verbose_name_plural = 'Bookmarks'
+        unique_together = ['user', 'product']  

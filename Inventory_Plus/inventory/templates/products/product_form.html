@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
 
 {% block title %}{% if form.instance.pk %}Edit{% else %}Add{% endif %} Product - Inventory Plus{% endblock %}
 
@@ -10,45 +9,82 @@
             <h3 class="mb-4">
                 <i class="bi bi-box"></i> {% if form.instance.pk %}Edit{% else %}Add New{% endif %} Product
             </h3>
-            
-            <form method="post" novalidate>
+            <form method="post" enctype="multipart/form-data" novalidate>
                 {% csrf_token %}
                 
+                
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+                
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        {{ form.name|as_crispy_field }}
+                        <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="text-danger small">{{ form.name.errors }}</div>
+                        {% endif %}
                     </div>
                     <div class="col-md-6 mb-3">
-                        {{ form.sku|as_crispy_field }}
+                        <label for="{{ form.sku.id_for_label }}" class="form-label">{{ form.sku.label }}</label>
+                        {{ form.sku }}
+                        {% if form.sku.errors %}
+                            <div class="text-danger small">{{ form.sku.errors }}</div>
+                        {% endif %}
                     </div>
                 </div>
                 
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        {{ form.category|as_crispy_field }}
+                        <label for="{{ form.category.id_for_label }}" class="form-label">{{ form.category.label }}</label>
+                        {{ form.category }}
+                        {% if form.category.errors %}
+                            <div class="text-danger small">{{ form.category.errors }}</div>
+                        {% endif %}
                     </div>
                     <div class="col-md-6 mb-3">
-                        {{ form.unit_price|as_crispy_field }}
+                        <label for="{{ form.unit_price.id_for_label }}" class="form-label">{{ form.unit_price.label }}</label>
+                        {{ form.unit_price }}
+                        {% if form.unit_price.errors %}
+                            <div class="text-danger small">{{ form.unit_price.errors }}</div>
+                        {% endif %}
                     </div>
                 </div>
                 
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        {{ form.quantity_in_stock|as_crispy_field }}
+                        <label for="{{ form.quantity_in_stock.id_for_label }}" class="form-label">{{ form.quantity_in_stock.label }}</label>
+                        {{ form.quantity_in_stock }}
+                        {% if form.quantity_in_stock.errors %}
+                            <div class="text-danger small">{{ form.quantity_in_stock.errors }}</div>
+                        {% endif %}
                     </div>
                     <div class="col-md-6 mb-3">
-                        {{ form.reorder_level|as_crispy_field }}
+                        <label for="{{ form.reorder_level.id_for_label }}" class="form-label">{{ form.reorder_level.label }}</label>
+                        {{ form.reorder_level }}
+                        {% if form.reorder_level.errors %}
+                            <div class="text-danger small">{{ form.reorder_level.errors }}</div>
+                        {% endif %}
                     </div>
                 </div>
                 
                 <div class="mb-3">
-                    {{ form.description|as_crispy_field }}
+                    <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                        <div class="text-danger small">{{ form.description.errors }}</div>
+                    {% endif %}
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label">Suppliers</label>
                     <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
                         {{ form.suppliers }}
+                        {% if form.suppliers.errors %}
+                            <div class="text-danger small">{{ form.suppliers.errors }}</div>
+                        {% endif %}
                     </div>
                 </div>
                 
@@ -59,12 +95,30 @@
                             <label class="form-check-label" for="{{ form.is_perishable.id_for_label }}">
                                 Is Perishable Product
                             </label>
+                            {% if form.is_perishable.errors %}
+                                <div class="text-danger small">{{ form.is_perishable.errors }}</div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="col-md-6 mb-3" id="expiry-date-field">
-                        {{ form.expiry_date|as_crispy_field }}
+                        <label for="{{ form.expiry_date.id_for_label }}" class="form-label">{{ form.expiry_date.label }}</label>
+                        {{ form.expiry_date }}
+                        {% if form.expiry_date.errors %}
+                            <div class="text-danger small">{{ form.expiry_date.errors }}</div>
+                        {% endif %}
                     </div>
                 </div>
+                
+                {% if form.errors %}
+                <div class="alert alert-warning mt-3">
+                    <strong>Form has errors:</strong>
+                    <ul>
+                    {% for field, errors in form.errors.items %}
+                        <li>{{ field }}: {{ errors }}</li>
+                    {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
                 
                 <div class="d-flex justify-content-between">
                     <a href="{% url 'inventory:product_list' %}" class="btn btn-secondary">
@@ -92,8 +146,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    isPerishable.addEventListener('change', toggleExpiryField);
-    toggleExpiryField();
+    if (isPerishable) {
+        isPerishable.addEventListener('change', toggleExpiryField);
+        toggleExpiryField();
+    }
 });
 </script>
 {% endblock %}

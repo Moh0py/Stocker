@@ -17,6 +17,14 @@ class ProductForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # السطر المهم - جعل suppliers اختياري
+        self.fields['suppliers'].required = False
+        
+        # إضافة help text للتوضيح
+        self.fields['suppliers'].help_text = 'Select suppliers (optional)'
+        
+        # إضافة CSS classes
         for field in self.fields:
             if field != 'suppliers' and field != 'is_perishable':
                 self.fields[field].widget.attrs['class'] = 'form-control'

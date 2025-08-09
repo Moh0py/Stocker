@@ -44,7 +44,7 @@ class Product(models.Model):
     name = models.CharField(max_length=200)
     sku = models.CharField(max_length=50, unique=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products')
-    suppliers = models.ManyToManyField(Supplier, related_name='products')
+    suppliers = models.ManyToManyField(Supplier, related_name='products', blank=True)
     description = models.TextField(blank=True)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     quantity_in_stock = models.IntegerField(default=0, validators=[MinValueValidator(0)])

@@ -14,9 +14,6 @@ import csv
 from datetime import datetime, timedelta
 
 
-
-
-
 def is_admin(user):
     return user.is_authenticated and (user.is_superuser or user.is_staff)
 
@@ -348,3 +345,23 @@ def import_products(request):
 def export_products(request):
     products = Product.objects.select_related('category').prefetch_related('suppliers')
     return export_to_csv(products, 'products_export')
+
+
+#cheak erorr meassages
+
+class ProductCreateView(LoginRequiredMixin, CreateView):
+    model = Product
+    form_class = ProductForm
+    template_name = 'products/product_form.html'
+    success_url = reverse_lazy('inventory:product_list')
+    
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        messages.success(self.request, 'Product created successfully!')
+        return super().form_valid(form)
+    
+    def form_invalid(self, form):
+      
+        print("Form errors:", form.errors)
+        messages.error(self.request, 'Please correct the errors below.')
+        return super().form_invalid(form)
