@@ -611,6 +611,7 @@ a:hover {
 
 .table tbody td {
     font-weight: 500;
+    align-items: flex-end;
 }
 
 .nav-link {

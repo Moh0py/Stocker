@@ -41,8 +41,8 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     about = models.TextField(blank=True)
     avatar = models.ImageField(upload_to="images/avatars/", default="images/avatars/avatar.webp")
-    department = models.CharField(max_length=100, blank=True, verbose_name='القسم')
-    employee_id = models.CharField(max_length=50, blank=True, unique=True, null=True, verbose_name='رقم الموظف')
+    department = models.CharField(max_length=100, blank=True, verbose_name='section')
+    employee_id = models.CharField(max_length=50, blank=True, unique=True, null=True, verbose_name='emoplye number')
     
     def __str__(self) -> str:
         return f"Profile {self.user.username}"
