@@ -348,20 +348,23 @@ def supplier_report(request):
     return render(request, 'reports/supplier_report.html', context)
 
 
-# Import/Export - Only admins
+
 @login_required
 @user_passes_test(is_admin_or_staff)
+
 def import_products(request):
-    """Only admins can import products"""
     if request.method == 'POST':
         form = ImportForm(request.POST, request.FILES)
         if form.is_valid():
             csv_file = form.cleaned_data['csv_file']
             result = import_from_csv(csv_file, request.user)
+            
             if result['success']:
                 messages.success(request, f"Successfully imported {result['count']} products!")
             else:
-                messages.error(request, f"Error importing products: {result['error']}")
+                error_messages = '\n'.join(result.get('errors', []))
+                messages.error(request, f"Error importing products:\n{error_messages}")
+            
             return redirect('inventory:product_list')
     else:
         form = ImportForm()

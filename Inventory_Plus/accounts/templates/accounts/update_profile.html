@@ -1,106 +1,278 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Update Profile - {{ user.get_full_name|default:user.username }}{% endblock %}
+{% block title %}Profile - {{ user.get_full_name|default:user.username }}{% endblock %}
 
 {% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-3 text-center">
+            <div class="card">
+                <div class="card-body">
+                    <img src="{% static 'images/avatars/img_avatar.png' %}" 
+                         alt="Avatar" 
+                         class="img-fluid rounded-circle mb-3" 
+                         style="max-width: 150px;">
+                    <h4>{{ user.get_full_name|default:user.username }}</h4>
+                    <p class="text-muted">@{{ user.username }}</p>
+                    
+                    {% if user.is_staff %}
+                        <span class="badge bg-primary">Staff</span>
+                    {% endif %}
+                    
+                    {% if user.is_superuser %}
+                        <span class="badge bg-danger">Admin</span>
+                    {% endif %}
 
-<div class="row">
-    <div class="col-md-3 text-center">
-        <img src="{% static 'images/avatars/img_avatar.png' %}" alt="Avatar" class="img-fluid rounded-circle mb-3" style="max-width: 150px;">
-        <h4>{{ user.get_full_name|default:user.username }}</h4>
-        <p class="text-muted">@{{ user.username }}</p>
+                    <hr>
+                    <div class="text-start">
+                        <h6><strong>Department:</strong></h6>
+                        <p class="text-muted">{{ profile.department|default:"-" }}</p>
 
-        <hr>
-        <h6>Department:</h6>
-        <p>{{ profile.department|default:"-" }}</p>
-
-        <h6>Employee ID:</h6>
-        <p>{{ profile.employee_id|default:"-" }}</p>
-    </div>
-
-    <div class="col-md-9">
-        <h5>About Me</h5>
-        <p>{{ profile.about|default:"No information provided." }}</p>
-
-        <hr>
-        <h5>Update Profile Information</h5>
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="first_name">First Name</label>
-                <input type="text" name="first_name" class="form-control" id="first_name" value="{{ user.first_name }}">
-            </div>
-            <div class="form-group">
-                <label for="last_name">Last Name</label>
-                <input type="text" name="last_name" class="form-control" id="last_name" value="{{ user.last_name }}">
-            </div>
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" name="email" class="form-control" id="email" value="{{ user.email }}">
-            </div>
-            <div class="form-group">
-                <label for="about">About</label>
-                <textarea name="about" class="form-control" id="about" rows="3">{{ profile.about|default:'' }}</textarea>
-            </div>
-            <div class="form-group">
-                <label for="department">Department</label>
-                <input type="text" name="department" class="form-control" id="department" value="{{ profile.department|default:'' }}">
-            </div>
-            <div class="form-group">
-                <label for="employee_id">Employee ID</label>
-                <input type="text" name="employee_id" class="form-control" id="employee_id" value="{{ profile.employee_id|default:'' }}">
-            </div>
-            <div class="form-group">
-                <label for="avatar">Profile Picture</label>
-                <input type="file" name="avatar" class="form-control-file" id="avatar" accept="image/*">
-            </div>
-
-            <hr>
-            <h6>Change Password (Optional)</h6>
-            <div class="form-group">
-                <label for="password">New Password</label>
-                <input type="password" name="password" class="form-control" id="password" placeholder="Leave blank to keep current password">
-            </div>
-            <div class="form-group">
-                <label for="confirm_password">Confirm New Password</label>
-                <input type="password" name="confirm_password" class="form-control" id="confirm_password">
-            </div>
-
-            <button type="submit" class="btn btn-primary">Update Profile</button>
-            <a href="{% url 'accounts:user_profile_view' user_name=user.username %}" class="btn btn-secondary">Cancel</a>
-        </form>
-
-        <hr>
-        <h5>My Statistics</h5>
-        <div class="row text-center">
-            <div class="col-md-4">
-                <h3>{{ products_created_count|default:0 }}</h3>
-                <p>Products Created</p>
-            </div>
-            <div class="col-md-4">
-                <h3>{{ stock_movements_count|default:0 }}</h3>
-                <p>Stock Movements</p>
-            </div>
-            <div class="col-md-4">
-                <h3>{{ categories_count|default:0 }}</h3>
-                <p>Categories Managed</p>
+                        <h6><strong>Employee ID:</strong></h6>
+                        <p class="text-muted">{{ profile.employee_id|default:"-" }}</p>
+                        
+                        <h6><strong>Date Joined:</strong></h6>
+                        <p class="text-muted">{{ user.date_joined|date:"M d, Y" }}</p>
+                        
+                        <h6><strong>Last Login:</strong></h6>
+                        <p class="text-muted">{{ user.last_login|date:"M d, Y H:i"|default:"Never" }}</p>
+                    </div>
+                </div>
             </div>
         </div>
 
-        {% if recent_movements %}
-        <hr>
-        <h5>Recent Stock Movements</h5>
-        <ul class="list-group">
-            {% for move in recent_movements %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ move.product.name }} - {{ move.get_movement_type_display }} ({{ move.quantity }})
-                    <span class="text-muted small">{{ move.created_at|date:"Y-m-d H:i" }}</span>
-                </li>
-            {% endfor %}
-        </ul>
-        {% endif %}
+        <div class="col-md-9">
+            <!-- Display Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- About Me Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-user me-2"></i>About Me</h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ profile.about|default:"No information provided." }}</p>
+                </div>
+            </div>
+
+            <!-- Profile Information Form -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Profile Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="first_name" class="form-label">First Name</label>
+                                    <input type="text" 
+                                           name="first_name" 
+                                           class="form-control" 
+                                           id="first_name" 
+                                           value="{{ user.first_name }}"
+                                           required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="last_name" class="form-label">Last Name</label>
+                                    <input type="text" 
+                                           name="last_name" 
+                                           class="form-control" 
+                                           id="last_name" 
+                                           value="{{ user.last_name }}"
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email</label>
+                                    <input type="email" 
+                                           name="email" 
+                                           class="form-control" 
+                                           id="email" 
+                                           value="{{ user.email }}"
+                                           required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="phone_number" class="form-label">Phone Number</label>
+                                    <input type="text" 
+                                           name="phone_number" 
+                                           class="form-control" 
+                                           id="phone_number" 
+                                           value="{{ profile.phone_number|default:'' }}"
+                                           placeholder="Enter phone number">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="about" class="form-label">About</label>
+                            <textarea name="about" 
+                                      class="form-control" 
+                                      id="about" 
+                                      rows="3" 
+                                      placeholder="Tell us about yourself...">{{ profile.about|default:'' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="department" class="form-label">Department</label>
+                            <input type="text" 
+                                   name="department" 
+                                   class="form-control" 
+                                   id="department" 
+                                   value="{{ profile.department|default:'' }}"
+                                   placeholder="Enter department">
+                        </div>
+
+                        <hr>
+                        <h6>Change Password (Optional)</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">New Password</label>
+                                    <input type="password" 
+                                           name="password" 
+                                           class="form-control" 
+                                           id="password"
+                                           placeholder="Leave blank to keep current password">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="confirm_password" class="form-label">Confirm New Password</label>
+                                    <input type="password" 
+                                           name="confirm_password" 
+                                           class="form-control" 
+                                           id="confirm_password"
+                                           placeholder="Confirm new password">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Update Profile
+                            </button>
+                            <a href="{% url 'inventory:dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Statistics Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>My Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <div class="border rounded p-3">
+                                <h3 class="text-primary">{{ products_created_count|default:0 }}</h3>
+                                <p class="mb-0">Products Created</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3">
+                                <h3 class="text-success">{{ stock_movements_count|default:0 }}</h3>
+                                <p class="mb-0">Stock Movements</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3">
+                                <h3 class="text-info">{{ categories_count|default:0 }}</h3>
+                                <p class="mb-0">Categories Managed</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Stock Movements -->
+            {% if recent_movements %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Stock Movements</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for move in recent_movements %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ move.product.name }}</strong> - 
+                                    <span class="badge bg-{% if move.movement_type == 'in' %}success{% else %}danger{% endif %}">
+                                        {{ move.get_movement_type_display }}
+                                    </span>
+                                    <span class="text-muted">({{ move.quantity }})</span>
+                                    {% if move.notes %}
+                                        <br><small class="text-muted">{{ move.notes }}</small>
+                                    {% endif %}
+                                </div>
+                                <span class="text-muted small">{{ move.performed_at|date:"M d, Y H:i" }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if recent_movements|length >= 5 %}
+                        <div class="text-center mt-3">
+                            <a href="{% url 'inventory:stock_movements' %}" class="btn btn-outline-primary btn-sm">
+                                View All Movements
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Stock Movements</h5>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted">No recent stock movements found.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
+<script>
+// Password confirmation validation
+document.getElementById('confirm_password').addEventListener('input', function() {
+    const password = document.getElementById('password').value;
+    const confirmPassword = this.value;
+    
+    if (password && confirmPassword && password !== confirmPassword) {
+        this.setCustomValidity('Passwords do not match');
+    } else {
+        this.setCustomValidity('');
+    }
+});
+
+document.getElementById('password').addEventListener('input', function() {
+    const confirmPassword = document.getElementById('confirm_password');
+    if (confirmPassword.value) {
+        confirmPassword.dispatchEvent(new Event('input'));
+    }
+});
+</script>
 {% endblock %}
