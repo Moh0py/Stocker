@@ -345,7 +345,7 @@ def supplier_report(request):
         
         return response
     
-    return render(request, 'supplier/supplier_report.html', context)
+    return render(request, 'reports/supplier_report.html', context)
 
 
 # Import/Export - Only admins
@@ -366,7 +366,7 @@ def import_products(request):
     else:
         form = ImportForm()
     
-    return render(request, 'inventory/import.html', {'form': form})
+    return render(request, 'products/import.html', {'form': form})
 
 
 @login_required

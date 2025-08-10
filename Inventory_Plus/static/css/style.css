@@ -51,7 +51,7 @@ body {
 
 
 h1, h2, h3, h4, h5, h6 {
-    color: #212728;
+    color: var(--text-color);
     font-weight: 600;
     margin-bottom: 1rem;
 }
@@ -466,8 +466,7 @@ a:hover {
 
 
 .text-muted {
-    color: #44484e !important;
-    font: 1em sans-serif;
+    color: var(--text-muted) !important;
 }
 
 .text-primary {
@@ -611,7 +610,6 @@ a:hover {
 
 .table tbody td {
     font-weight: 500;
-    align-items: flex-end;
 }
 
 .nav-link {
