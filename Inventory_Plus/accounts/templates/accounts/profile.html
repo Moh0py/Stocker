@@ -2,11 +2,12 @@
 
 {% block title %}Profile - {{ user.get_full_name|default:user.username }}{% endblock %}
 
+{% load static %}  
+
 {% block content %}
 <div class="row">
-    <!-- Sidebar -->
     <div class="col-md-3 text-center">
-        <img src="{{ profile.avatar.url }}" alt="Avatar" class="img-fluid rounded-circle mb-3" style="max-width: 150px;">
+        <img src="{% if profile.avatar %}{{ profile.avatar.url }}{% else %}{% static 'images/avatars/img_avatar.png' %}{% endif %}" alt="Avatar" class="img-fluid rounded-circle mb-3" style="max-width: 150px;">
         <h4>{{ user.get_full_name|default:user.username }}</h4>
         <p class="text-muted">@{{ user.username }}</p>
 
@@ -24,10 +25,28 @@
         <p>{{ profile.employee_id|default:"-" }}</p>
     </div>
 
-    <!-- Main content -->
     <div class="col-md-9">
         <h5>About Me</h5>
         <p>{{ profile.about|default:"No information provided." }}</p>
+
+        <hr>
+        <h5>Profile Information</h5>
+        <div class="form-group">
+            <label for="first_name">First Name</label>
+            <p>{{ user.first_name }}</p>
+        </div>
+        <div class="form-group">
+            <label for="last_name">Last Name</label>
+            <p>{{ user.last_name }}</p>
+        </div>
+        <div class="form-group">
+            <label for="email">Email</label>
+            <p>{{ user.email }}</p>
+        </div>
+        <div class="form-group">
+            <label for="phone_number">Phone Number</label>
+            <p>{{ profile.phone_number}}</p>
+        </div>
 
         <hr>
         <h5>My Statistics</h5>

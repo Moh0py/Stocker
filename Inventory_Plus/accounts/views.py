@@ -10,8 +10,6 @@ from django.contrib.auth.decorators import login_required
 from .forms import SignUpForm
 from .models import Profile, User
 
-
-
 class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
     redirect_authenticated_user = True
@@ -23,7 +21,6 @@ class CustomLoginView(LoginView):
         messages.error(self.request, 'Invalid username or password.')
         return super().form_invalid(form)
 
-
 class SignUpView(CreateView):
     form_class = SignUpForm
     template_name = 'accounts/signup.html'
@@ -34,7 +31,6 @@ class SignUpView(CreateView):
         Profile.objects.create(user=self.object)
         messages.success(self.request, 'Account created successfully! Please login.')
         return response
-
 
 class CustomLogoutView(LogoutView):
     next_page = 'accounts:login'
@@ -78,6 +74,7 @@ def sign_up(request: HttpRequest):
 
 @login_required
 def update_user_profile(request: HttpRequest):
+    
     profile, created = Profile.objects.get_or_create(user=request.user)
     
     if request.method == "POST":
@@ -109,17 +106,21 @@ def update_user_profile(request: HttpRequest):
 
 
 def sign_in(request: HttpRequest):
+    
     if request.user.is_authenticated:
         return redirect("inventory:dashboard")
     
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
+        
         user = authenticate(request, username=username, password=password)
         
         if user is not None:
             login(request, user)
             messages.success(request, "Logged in successfully")
+            
+        
             next_url = request.GET.get("next", "inventory:dashboard")
             return redirect(next_url)
         else:
@@ -130,39 +131,31 @@ def sign_in(request: HttpRequest):
 
 @login_required
 def log_out(request: HttpRequest):
+    
     logout(request)
     messages.success(request, "Logged out successfully")
     return redirect("accounts:login")
 
 
-def user_profile_view(request:HttpRequest, user_name):
-
+def user_profile_view(request: HttpRequest, user_name: str):
+    
     try:
         user = User.objects.get(username=user_name)
-        if not Profile.objects.filter(user=user).first():
-            new_profile = Profile(user=user)
-            new_profile.save()
         
+       
+        profile, created = Profile.objects.get_or_create(user=user)
+        
+        if created:
+            print(f"Created new profile for user: {user_name}")
+        
+        return render(request, 'accounts/profile.html', {
+            "user": user,
+            "profile": profile
+        })
+        
+    except User.DoesNotExist:
+        messages.error(request, "User not found")
+        return render(request, '404.html')
     except Exception as e:
-        print(e)
-        return render(request,'404.html')
-    
-
-    return render(request, 'accounts/profile.html', {"user" : user})
-
-@login_required
-def profile_view(request):
-    profile, _ = Profile.objects.get_or_create(user=request.user)
-    products_count = Product.objects.filter(created_by=request.user).count() if hasattr(Product, 'created_by') else 0
-    suppliers_count = Supplier.objects.count()
-    movements_count = StockMovement.objects.filter(performed_by=request.user).count()
-    recent_movements = StockMovement.objects.filter(performed_by=request.user).select_related('product')[:5]
-
-    return render(request, 'accounts/profile.html', {
-        "user": request.user,
-        "profile": profile,
-        "products_count": products_count,
-        "suppliers_count": suppliers_count,
-        "movements_count": movements_count,
-        "recent_movements": recent_movements
-    })
+        print(f"Error in user_profile_view: {e}")
+        return render(request, '404.html')

@@ -93,46 +93,148 @@ def export_to_csv(queryset, filename):
     return response
 
 def import_from_csv(csv_file, user):
+    """
+    Import products from CSV file with improved error handling and header mapping
+    """
     try:
-        decoded_file = csv_file.read().decode('utf-8')
+        try:
+            decoded_file = csv_file.read().decode('utf-8')
+        except UnicodeDecodeError:
+            csv_file.seek(0)
+            try:
+                decoded_file = csv_file.read().decode('utf-8-sig')
+            except UnicodeDecodeError:
+                csv_file.seek(0)
+                decoded_file = csv_file.read().decode('latin-1')
+        
         io_string = io.StringIO(decoded_file)
         reader = csv.DictReader(io_string)
         
-        count = 0
-        for row in reader:
-            category = None
-            if row.get('category'):
-                category, _ = Category.objects.get_or_create(name=row['category'])
-            
-            product = Product(
-                name=row['name'],
-                sku=row['sku'],
-                category=category,
-                description=row.get('description', ''),
-                unit_price=float(row.get('unit_price', 0)),
-                quantity_in_stock=int(row.get('quantity_in_stock', 0)),
-                reorder_level=int(row.get('reorder_level', 10)),
-                created_by=user
-            )
-            product.save()
-            
-            if row.get('suppliers'):
-                supplier_names = row['suppliers'].split(',')
-                for supplier_name in supplier_names:
-                    supplier, _ = Supplier.objects.get_or_create(
-                        name=supplier_name.strip(),
-                        defaults={
-                            'email': f'{supplier_name.strip().lower().replace(" ", "")}@example.com',
-                            'phone_number': '000-000-0000',
-                            'address': 'Unknown',
-                            'city': 'Unknown',
-                            'country': 'Unknown'
-                        }
-                    )
-                    product.suppliers.add(supplier)
-            
-            count += 1
+        header_mapping = {
+            'Name': 'name',
+            'name': 'name',
+            'SKU': 'sku',
+            'sku': 'sku',
+            'Category': 'category',
+            'category': 'category',
+            'Description': 'description',
+            'description': 'description',
+            'Unit Price': 'unit_price',
+            'unit_price': 'unit_price',
+            'Price': 'unit_price',
+            'price': 'unit_price',
+            'Stock': 'quantity_in_stock',
+            'stock': 'quantity_in_stock',
+            'quantity_in_stock': 'quantity_in_stock',
+            'Quantity': 'quantity_in_stock',
+            'quantity': 'quantity_in_stock',
+            'Reorder Level': 'reorder_level',
+            'reorder_level': 'reorder_level',
+            'reorder': 'reorder_level',
+            'Reorder': 'reorder_level',
+            'Suppliers': 'suppliers',
+            'suppliers': 'suppliers',
+            'Supplier': 'suppliers',
+            'supplier': 'suppliers'
+        }
         
-        return {'success': True, 'count': count}
+        errors = []
+        success_count = 0
+        
+        for row_num, row in enumerate(reader, start=2):  
+            try:
+                mapped_row = {}
+                for key, value in row.items():
+                    mapped_key = header_mapping.get(key, key.lower())
+                    mapped_row[mapped_key] = value
+                
+                if not mapped_row.get('name') or not mapped_row.get('name').strip():
+                    errors.append(f"Row {row_num}: Product name is required")
+                    continue
+                
+                if not mapped_row.get('sku') or not mapped_row.get('sku').strip():
+                    errors.append(f"Row {row_num}: SKU is required")
+                    continue
+                
+                name = mapped_row['name'].strip()
+                sku = mapped_row['sku'].strip()
+                
+                if Product.objects.filter(sku=sku).exists():
+                    errors.append(f"Row {row_num}: Product with SKU '{sku}' already exists")
+                    continue
+                
+                category = None
+                if mapped_row.get('category') and mapped_row['category'].strip():
+                    category_name = mapped_row['category'].strip()
+                    category, created = Category.objects.get_or_create(name=category_name)
+                
+                try:
+                    unit_price = float(mapped_row.get('unit_price', 0) or 0)
+                except (ValueError, TypeError):
+                    unit_price = 0.0
+                    errors.append(f"Row {row_num}: Invalid unit price, defaulting to 0")
+                
+                try:
+                    quantity_in_stock = int(float(mapped_row.get('quantity_in_stock', 0) or 0))
+                except (ValueError, TypeError):
+                    quantity_in_stock = 0
+                    errors.append(f"Row {row_num}: Invalid stock quantity, defaulting to 0")
+                
+                try:
+                    reorder_level = int(float(mapped_row.get('reorder_level', 10) or 10))
+                except (ValueError, TypeError):
+                    reorder_level = 10
+                    errors.append(f"Row {row_num}: Invalid reorder level, defaulting to 10")
+                
+                product = Product(
+                    name=name,
+                    sku=sku,
+                    category=category,
+                    description=mapped_row.get('description', '').strip(),
+                    unit_price=unit_price,
+                    quantity_in_stock=quantity_in_stock,
+                    reorder_level=reorder_level,
+                    created_by=user
+                )
+                product.save()
+                
+                suppliers_data = mapped_row.get('suppliers', '')
+                if suppliers_data and suppliers_data.strip() and suppliers_data.strip() != 'nan':
+                    try:
+                        supplier_names = [s.strip() for s in str(suppliers_data).split(',') if s.strip()]
+                        for supplier_name in supplier_names:
+                            if supplier_name and supplier_name != 'nan':
+                                supplier, created = Supplier.objects.get_or_create(
+                                    name=supplier_name,
+                                    defaults={
+                                        'email': f'{supplier_name.lower().replace(" ", "").replace(".", "")}@example.com',
+                                        'phone_number': '000-000-0000',
+                                        'address': 'Unknown',
+                                        'city': 'Unknown',
+                                        'country': 'Unknown'
+                                    }
+                                )
+                                product.suppliers.add(supplier)
+                    except Exception as supplier_error:
+                        errors.append(f"Row {row_num}: Error processing suppliers: {str(supplier_error)}")
+                
+                success_count += 1
+                
+            except Exception as row_error:
+                errors.append(f"Row {row_num}: Unexpected error - {str(row_error)}")
+                continue
+        
+        return {
+            'success': success_count > 0,
+            'count': success_count,
+            'errors': errors,
+            'total_processed': success_count + len(errors)
+        }
+        
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        return {
+            'success': False,
+            'error': f'File reading error: {str(e)}',
+            'count': 0,
+            'errors': []
+        }

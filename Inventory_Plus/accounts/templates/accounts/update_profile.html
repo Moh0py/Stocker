@@ -1,48 +1,106 @@
-{% extends 'base.html'%}
+{% extends 'base.html' %}
+{% load static %}
 
-
-{% block title %} update {{request.user.username}} {% endblock %}
+{% block title %}Update Profile - {{ user.get_full_name|default:user.username }}{% endblock %}
 
 {% block content %}
-<div class="container d-flex flex-column justify-content-center align-items-center">
 
-    <h2>Update Profile </h2>
-    <form class="d-flex flex-column gap-3 w-50" action="{% url 'accounts:update_user_profile' %}" method="POST" enctype="multipart/form-data">
-        {% csrf_token %}
-        
-    
-        <div class="form-floating">
-          <input type="email" class="form-control" id="floatingInput" placeholder="name@example.com" name="email" required value="{{request.user.email}}">
-          <label for="floatingInput">Email address</label>
+<div class="row">
+    <div class="col-md-3 text-center">
+        <img src="{% static 'images/avatars/img_avatar.png' %}" alt="Avatar" class="img-fluid rounded-circle mb-3" style="max-width: 150px;">
+        <h4>{{ user.get_full_name|default:user.username }}</h4>
+        <p class="text-muted">@{{ user.username }}</p>
+
+        <hr>
+        <h6>Department:</h6>
+        <p>{{ profile.department|default:"-" }}</p>
+
+        <h6>Employee ID:</h6>
+        <p>{{ profile.employee_id|default:"-" }}</p>
+    </div>
+
+    <div class="col-md-9">
+        <h5>About Me</h5>
+        <p>{{ profile.about|default:"No information provided." }}</p>
+
+        <hr>
+        <h5>Update Profile Information</h5>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="first_name">First Name</label>
+                <input type="text" name="first_name" class="form-control" id="first_name" value="{{ user.first_name }}">
+            </div>
+            <div class="form-group">
+                <label for="last_name">Last Name</label>
+                <input type="text" name="last_name" class="form-control" id="last_name" value="{{ user.last_name }}">
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" name="email" class="form-control" id="email" value="{{ user.email }}">
+            </div>
+            <div class="form-group">
+                <label for="about">About</label>
+                <textarea name="about" class="form-control" id="about" rows="3">{{ profile.about|default:'' }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="department">Department</label>
+                <input type="text" name="department" class="form-control" id="department" value="{{ profile.department|default:'' }}">
+            </div>
+            <div class="form-group">
+                <label for="employee_id">Employee ID</label>
+                <input type="text" name="employee_id" class="form-control" id="employee_id" value="{{ profile.employee_id|default:'' }}">
+            </div>
+            <div class="form-group">
+                <label for="avatar">Profile Picture</label>
+                <input type="file" name="avatar" class="form-control-file" id="avatar" accept="image/*">
+            </div>
+
+            <hr>
+            <h6>Change Password (Optional)</h6>
+            <div class="form-group">
+                <label for="password">New Password</label>
+                <input type="password" name="password" class="form-control" id="password" placeholder="Leave blank to keep current password">
+            </div>
+            <div class="form-group">
+                <label for="confirm_password">Confirm New Password</label>
+                <input type="password" name="confirm_password" class="form-control" id="confirm_password">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Update Profile</button>
+            <a href="{% url 'accounts:user_profile_view' user_name=user.username %}" class="btn btn-secondary">Cancel</a>
+        </form>
+
+        <hr>
+        <h5>My Statistics</h5>
+        <div class="row text-center">
+            <div class="col-md-4">
+                <h3>{{ products_created_count|default:0 }}</h3>
+                <p>Products Created</p>
+            </div>
+            <div class="col-md-4">
+                <h3>{{ stock_movements_count|default:0 }}</h3>
+                <p>Stock Movements</p>
+            </div>
+            <div class="col-md-4">
+                <h3>{{ categories_count|default:0 }}</h3>
+                <p>Categories Managed</p>
+            </div>
         </div>
 
-
-        <div class="form-floating">
-            <input type="text" class="form-control" id="floatingInput" placeholder="First name" name="first_name" required value="{{request.user.first_name}}">
-            <label for="floatingInput">First name</label>
-        </div>
-
-        <div class="form-floating">
-            <input type="text" class="form-control" id="floatingInput" placeholder="Last name" name="last_name" required value="{{request.user.last_name}}">
-            <label for="floatingInput">Last name</label>
-        </div>
-
-
-
-        <textarea class="form-control" placeholder="About" name="about">{{request.user.profile.about}}</textarea>
-
-        <div class="form-floating">
-          <input type="url" class="form-control" id="floatingTwitch" placeholder="Twitch Link" name="twitch_link" value="{{request.user.profile.twitch_link}}">
-          <label for="floatingTwitch">Twitch Link</label>
-        </div>
-        
-        <h5>Choose Avatar:</h5>
-        <img src="{{request.user.profile.avatar.url}}" class="avatar rounded-4" />
-        <input type="file" name="avatar" accept="images/*" class="form-control" />
-
-
-        <button class="btn btn-primary w-100 py-2" type="submit">Update</button>
-      </form>
+        {% if recent_movements %}
+        <hr>
+        <h5>Recent Stock Movements</h5>
+        <ul class="list-group">
+            {% for move in recent_movements %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ move.product.name }} - {{ move.get_movement_type_display }} ({{ move.quantity }})
+                    <span class="text-muted small">{{ move.created_at|date:"Y-m-d H:i" }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
 </div>
 
 {% endblock %}
