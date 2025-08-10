@@ -135,22 +135,34 @@ def log_out(request: HttpRequest):
     return redirect("accounts:login")
 
 
-def user_profile_view(request: HttpRequest, user_name: str):
+def user_profile_view(request:HttpRequest, user_name):
+
     try:
         user = User.objects.get(username=user_name)
-        profile, created = Profile.objects.get_or_create(user=user)
+        if not Profile.objects.filter(user=user).first():
+            new_profile = Profile(user=user)
+            new_profile.save()
         
-        if created:
-            print(f"Created new profile for user: {user_name}")
-        
-        return render(request, 'accounts/profile.html', {
-            "user": user,
-            "profile": profile
-        })
-        
-    except User.DoesNotExist:
-        messages.error(request, "User not found")
-        return render(request, '404.html')
     except Exception as e:
-        print(f"Error in user_profile_view: {e}")
-        return render(request, '404.html')
+        print(e)
+        return render(request,'404.html')
+    
+
+    return render(request, 'accounts/profile.html', {"user" : user})
+
+@login_required
+def profile_view(request):
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    products_count = Product.objects.filter(created_by=request.user).count() if hasattr(Product, 'created_by') else 0
+    suppliers_count = Supplier.objects.count()
+    movements_count = StockMovement.objects.filter(performed_by=request.user).count()
+    recent_movements = StockMovement.objects.filter(performed_by=request.user).select_related('product')[:5]
+
+    return render(request, 'accounts/profile.html', {
+        "user": request.user,
+        "profile": profile,
+        "products_count": products_count,
+        "suppliers_count": suppliers_count,
+        "movements_count": movements_count,
+        "recent_movements": recent_movements
+    })

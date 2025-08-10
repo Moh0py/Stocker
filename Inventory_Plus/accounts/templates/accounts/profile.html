@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile - {{ user.get_full_name|default:user.username }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 text-center">
+        <img src="{{ profile.avatar.url }}" alt="Avatar" class="img-fluid rounded-circle mb-3" style="max-width: 150px;">
+        <h4>{{ user.get_full_name|default:user.username }}</h4>
+        <p class="text-muted">@{{ user.username }}</p>
+
+        {% if request.user == user %}
+            <a href="{% url 'accounts:update_user_profile' %}" class="btn btn-sm btn-primary mb-2">
+                <i class="bi bi-pencil-square"></i> Edit Profile
+            </a>
+        {% endif %}
+
+        <hr>
+        <h6>Department:</h6>
+        <p>{{ profile.department|default:"-" }}</p>
+
+        <h6>Employee ID:</h6>
+        <p>{{ profile.employee_id|default:"-" }}</p>
+    </div>
+
+    <!-- Main content -->
+    <div class="col-md-9">
+        <h5>About Me</h5>
+        <p>{{ profile.about|default:"No information provided." }}</p>
+
+        <hr>
+        <h5>My Statistics</h5>
+        <div class="row text-center">
+            <div class="col-md-4">
+                <h3>{{ products_created_count }}</h3>
+                <p>Products Created</p>
+            </div>
+            <div class="col-md-4">
+                <h3>{{ stock_movements_count }}</h3>
+                <p>Stock Movements</p>
+            </div>
+            <div class="col-md-4">
+                <h3>{{ categories_count }}</h3>
+                <p>Categories Managed</p>
+            </div>
+        </div>
+
+        {% if recent_movements %}
+        <hr>
+        <h5>Recent Stock Movements</h5>
+        <ul class="list-group">
+            {% for move in recent_movements %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ move.product.name }} - {{ move.get_movement_type_display }} ({{ move.quantity }})
+                    <span class="text-muted small">{{ move.performed_at|date:"Y-m-d H:i" }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.db.models import Q, Sum, Count, F
 from django.core.paginator import Paginator
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
@@ -14,9 +14,30 @@ import csv
 from datetime import datetime, timedelta
 
 
+# Helper functions for permission checks
 def is_admin(user):
-    return user.is_authenticated and (user.is_superuser or user.is_staff)
+    """Check if user is admin (using user_type field)"""
+    return user.is_authenticated and hasattr(user, 'is_admin_user') and user.is_admin_user()
 
+def is_admin_or_staff(user):
+    """Check if user is admin, staff, or superuser"""
+    if not user.is_authenticated:
+        return False
+    return (hasattr(user, 'is_admin_user') and user.is_admin_user()) or user.is_staff or user.is_superuser
+
+
+# Mixins for permission checks
+class AdminRequiredMixin(UserPassesTestMixin):
+    """Mixin to check if user is admin"""
+    def test_func(self):
+        return is_admin_or_staff(self.request.user)
+    
+    def handle_no_permission(self):
+        messages.error(self.request, 'You do not have permission to perform this action.')
+        return redirect('inventory:dashboard')
+
+
+# Dashboard View
 @login_required
 def dashboard(request):
     total_products = Product.objects.count()
@@ -27,8 +48,8 @@ def dashboard(request):
     recent_movements = StockMovement.objects.select_related('product', 'performed_by')[:10]
     low_stock_items = Product.objects.filter(quantity_in_stock__lte=F('reorder_level'))[:5]
     
-    # Check if user is admin (staff or superuser)
-    if request.user.is_staff or request.user.is_superuser:
+    # Show expiring products only to admins
+    if is_admin_or_staff(request.user):
         expiring_products = Product.objects.filter(
             is_perishable=True,
             expiry_date__lte=datetime.now().date() + timedelta(days=7)
@@ -47,6 +68,8 @@ def dashboard(request):
     }
     return render(request, 'inventory/dashboard.html', context)
 
+
+# Product Views - Employees can view, add, update (but not delete)
 class ProductListView(LoginRequiredMixin, ListView):
     model = Product
     template_name = 'products/product_list.html'
@@ -78,6 +101,8 @@ class ProductListView(LoginRequiredMixin, ListView):
         context['suppliers'] = Supplier.objects.all()
         return context
 
+
+
 class ProductDetailView(LoginRequiredMixin, DetailView):
     model = Product
     template_name = 'products/product_detail.html'
@@ -87,6 +112,7 @@ class ProductDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['movements'] = self.object.stock_movements.all()[:10]
         return context
+
 
 class ProductCreateView(LoginRequiredMixin, CreateView):
     model = Product
@@ -98,6 +124,12 @@ class ProductCreateView(LoginRequiredMixin, CreateView):
         form.instance.created_by = self.request.user
         messages.success(self.request, 'Product created successfully!')
         return super().form_valid(form)
+    
+    def form_invalid(self, form):
+        print("Form errors:", form.errors)
+        messages.error(self.request, 'Please correct the errors below.')
+        return super().form_invalid(form)
+
 
 class ProductUpdateView(LoginRequiredMixin, UpdateView):
     model = Product
@@ -109,20 +141,20 @@ class ProductUpdateView(LoginRequiredMixin, UpdateView):
         messages.success(self.request, 'Product updated successfully!')
         return super().form_valid(form)
 
-class ProductDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+
+class ProductDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
     model = Product
     template_name = 'products/product_confirm_delete.html'
     success_url = reverse_lazy('inventory:product_list')
-    
-    def test_func(self):
-        return self.request.user.is_staff or self.request.user.is_superuser
     
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Product deleted successfully!')
         return super().delete(request, *args, **kwargs)
 
+
 @login_required
 def update_stock(request, pk):
+    """Employees and admins can update stock"""
     product = get_object_or_404(Product, pk=pk)
     
     if request.method == 'POST':
@@ -160,10 +192,9 @@ def update_stock(request, pk):
     else:
         form = StockUpdateForm()
     
-    return render(request, 'inventory/stock/stock_update.html', {
-        'form': form,
-        'product': product
-    })
+    return render(request, 'stock/stock_update.html', {'form': form, 'product': product})
+
+
 
 class CategoryListView(LoginRequiredMixin, ListView):
     model = Category
@@ -171,49 +202,45 @@ class CategoryListView(LoginRequiredMixin, ListView):
     context_object_name = 'categories'
     paginate_by = 10
 
-class CategoryCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+
+class CategoryCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
     model = Category
     form_class = CategoryForm
     template_name = 'categories/category_form.html'
     success_url = reverse_lazy('inventory:category_list')
-    
-    def test_func(self):
-        return self.request.user.is_staff or self.request.user.is_superuser
     
     def form_valid(self, form):
         messages.success(self.request, 'Category created successfully!')
         return super().form_valid(form)
 
-class CategoryUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+
+class CategoryUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
     model = Category
     form_class = CategoryForm
     template_name = 'categories/category_form.html'
     success_url = reverse_lazy('inventory:category_list')
     
-    def test_func(self):
-        return self.request.user.is_staff or self.request.user.is_superuser
-    
     def form_valid(self, form):
         messages.success(self.request, 'Category updated successfully!')
         return super().form_valid(form)
 
-class CategoryDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+
+class CategoryDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
     model = Category
     template_name = 'categories/category_confirm_delete.html'
     success_url = reverse_lazy('inventory:category_list')
     
-    def test_func(self):
-        return self.request.user.is_staff or self.request.user.is_superuser
-    
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Category deleted successfully!')
         return super().delete(request, *args, **kwargs)
+
 
 class SupplierListView(LoginRequiredMixin, ListView):
     model = Supplier
     template_name = 'suppliers/supplier_list.html'
     context_object_name = 'suppliers'
     paginate_by = 10
+
 
 class SupplierDetailView(LoginRequiredMixin, DetailView):
     model = Supplier
@@ -225,44 +252,40 @@ class SupplierDetailView(LoginRequiredMixin, DetailView):
         context['products'] = self.object.products.all()
         return context
 
-class SupplierCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+
+class SupplierCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
     model = Supplier
     form_class = SupplierForm
     template_name = 'suppliers/supplier_form.html'
     success_url = reverse_lazy('inventory:supplier_list')
-    
-    def test_func(self):
-        return self.request.user.is_staff or self.request.user.is_superuser
     
     def form_valid(self, form):
         messages.success(self.request, 'Supplier created successfully!')
         return super().form_valid(form)
 
-class SupplierUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+
+class SupplierUpdateView(LoginRequiredMixin, AdminRequiredMixin, UpdateView):
     model = Supplier
     form_class = SupplierForm
     template_name = 'suppliers/supplier_form.html'
     success_url = reverse_lazy('inventory:supplier_list')
     
-    def test_func(self):
-        return self.request.user.is_staff or self.request.user.is_superuser
-    
     def form_valid(self, form):
         messages.success(self.request, 'Supplier updated successfully!')
         return super().form_valid(form)
 
-class SupplierDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+
+class SupplierDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
     model = Supplier
     template_name = 'suppliers/supplier_confirm_delete.html'
     success_url = reverse_lazy('inventory:supplier_list')
-    
-    def test_func(self):
-        return self.request.user.is_staff or self.request.user.is_superuser
     
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Supplier deleted successfully!')
         return super().delete(request, *args, **kwargs)
 
+
+# Report Views - Available to all logged-in users
 @login_required
 def inventory_report(request):
     products = Product.objects.select_related('category').prefetch_related('suppliers')
@@ -288,6 +311,7 @@ def inventory_report(request):
         return export_to_csv(products, 'inventory_report')
     
     return render(request, 'reports/inventory_report.html', context)
+
 
 @login_required
 def supplier_report(request):
@@ -321,11 +345,14 @@ def supplier_report(request):
         
         return response
     
-    return render(request, 'reports/supplier_report.html', context)
+    return render(request, 'supplier/supplier_report.html', context)
 
+
+# Import/Export - Only admins
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_staff)
 def import_products(request):
+    """Only admins can import products"""
     if request.method == 'POST':
         form = ImportForm(request.POST, request.FILES)
         if form.is_valid():
@@ -339,29 +366,11 @@ def import_products(request):
     else:
         form = ImportForm()
     
-    return render(request, 'products/import.html', {'form': form})
+    return render(request, 'inventory/import.html', {'form': form})
+
 
 @login_required
 def export_products(request):
+    """Everyone can export products"""
     products = Product.objects.select_related('category').prefetch_related('suppliers')
     return export_to_csv(products, 'products_export')
-
-
-#cheak erorr meassages
-
-class ProductCreateView(LoginRequiredMixin, CreateView):
-    model = Product
-    form_class = ProductForm
-    template_name = 'products/product_form.html'
-    success_url = reverse_lazy('inventory:product_list')
-    
-    def form_valid(self, form):
-        form.instance.created_by = self.request.user
-        messages.success(self.request, 'Product created successfully!')
-        return super().form_valid(form)
-    
-    def form_invalid(self, form):
-      
-        print("Form errors:", form.errors)
-        messages.error(self.request, 'Please correct the errors below.')
-        return super().form_invalid(form)

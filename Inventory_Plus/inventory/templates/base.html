@@ -13,6 +13,7 @@
 <body>
     <div class="container-fluid">
         <div class="row">
+            <!-- Sidebar Navigation -->
             <nav class="col-md-2 d-md-block sidebar p-0">
                 <div class="position-sticky">
                     <div class="text-center py-4">
@@ -22,30 +23,39 @@
                     </div>
                     
                     <ul class="nav flex-column">
+                        <!-- Dashboard - Available to all -->
                         <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" 
                                href="{% url 'inventory:dashboard' %}">
                                 <i class="bi bi-speedometer2"></i> Dashboard
                             </a>
                         </li>
+                        
+                        <!-- Products - Available to all -->
                         <li class="nav-item">
                             <a class="nav-link {% if 'product' in request.resolver_match.url_name %}active{% endif %}" 
                                href="{% url 'inventory:product_list' %}">
                                 <i class="bi bi-box"></i> Products
                             </a>
                         </li>
+                        
+                        <!-- Categories - View for all, manage for admins -->
                         <li class="nav-item">
                             <a class="nav-link {% if 'category' in request.resolver_match.url_name %}active{% endif %}" 
                                href="{% url 'inventory:category_list' %}">
                                 <i class="bi bi-tags"></i> Categories
                             </a>
                         </li>
+                        
+                        <!-- Suppliers - View for all, manage for admins -->
                         <li class="nav-item">
                             <a class="nav-link {% if 'supplier' in request.resolver_match.url_name %}active{% endif %}" 
                                href="{% url 'inventory:supplier_list' %}">
                                 <i class="bi bi-truck"></i> Suppliers
                             </a>
                         </li>
+                        
+                        <!-- Reports - Available to all -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                                 <i class="bi bi-file-earmark-text"></i> Reports
@@ -55,25 +65,63 @@
                                 <li><a class="dropdown-item" href="{% url 'inventory:supplier_report' %}">Supplier Report</a></li>
                             </ul>
                         </li>
+                        
+                        <!-- Admin Section - Only for admins -->
+                        {% if user.is_admin_user or user.is_staff or user.is_superuser %}
+                        <li class="nav-item mt-3">
+                            <span class="nav-link text-muted small">ADMIN TOOLS</span>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'inventory:import_products' %}">
+                                <i class="bi bi-upload"></i> Import Products
+                            </a>
+                        </li>
+                        {% if user.is_superuser %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/" target="_blank">
+                                <i class="bi bi-gear"></i> Django Admin
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% endif %}
                     </ul>
                 
-                    <div class="position-absolute bottom-3 w-100 p-3">
+                    <!-- User Info Section -->
+                    <div class="position-absolute bottom-5 w-100 p-3">
                         <div class="text-white small mb-3">
                             <i class="bi bi-person-circle"></i> {{ user.get_full_name|default:user.username }}
                             <br>
-                            <span class="badge bg-light text-dark mt-1">{{ user.get_user_type_display }}</span>
+                            {% if user.is_admin_user %}
+                                <span class="badge bg-danger mt-1">Admin</span>
+                            {% elif user.is_staff %}
+                                <span class="badge bg-warning mt-1">Staff</span>
+                            {% elif user.is_superuser %}
+                                <span class="badge bg-primary mt-1">Superuser</span>
+                            {% else %}
+                                <span class="badge bg-info mt-1">Employee</span>
+                            {% endif %}
                         </div>
-                        <form method="post" action="{% url 'accounts:logout' %}" style="margin: 0;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-outline-light w-100">
-                                <i class="bi bi-box-arrow-right"></i> Logout
-                            </button>
-                        </form>
+                        
+                        <!-- Profile & Logout -->
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'accounts:user_profile_view' user.username %}" class="btn btn-sm btn-outline-light">
+                                <i class="bi bi-person"></i> Profile
+                            </a>
+                            <form method="post" action="{% url 'accounts:logout' %}" style="margin: 0;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-light w-100">
+                                    <i class="bi bi-box-arrow-right"></i> Logout
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </nav>
+            
+            <!-- Main Content Area -->
             <main class="col-md-10 ms-sm-auto main-content">
                 <div class="p-4">
+                    <!-- Messages -->
                     {% if messages %}
                         {% for message in messages %}
                             <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
@@ -83,12 +131,14 @@
                         {% endfor %}
                     {% endif %}
 
+                    <!-- Page Content -->
                     {% block content %}{% endblock %}
                 </div>
             </main>
         </div>
     </div>
     
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
