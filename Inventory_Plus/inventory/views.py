@@ -14,21 +14,17 @@ import csv
 from datetime import datetime, timedelta
 
 
-# Helper functions for permission checks
 def is_admin(user):
-    """Check if user is admin (using user_type field)"""
     return user.is_authenticated and hasattr(user, 'is_admin_user') and user.is_admin_user()
 
+
 def is_admin_or_staff(user):
-    """Check if user is admin, staff, or superuser"""
     if not user.is_authenticated:
         return False
     return (hasattr(user, 'is_admin_user') and user.is_admin_user()) or user.is_staff or user.is_superuser
 
 
-# Mixins for permission checks
 class AdminRequiredMixin(UserPassesTestMixin):
-    """Mixin to check if user is admin"""
     def test_func(self):
         return is_admin_or_staff(self.request.user)
     
@@ -37,7 +33,6 @@ class AdminRequiredMixin(UserPassesTestMixin):
         return redirect('inventory:dashboard')
 
 
-# Dashboard View
 @login_required
 def dashboard(request):
     total_products = Product.objects.count()
@@ -48,7 +43,6 @@ def dashboard(request):
     recent_movements = StockMovement.objects.select_related('product', 'performed_by')[:10]
     low_stock_items = Product.objects.filter(quantity_in_stock__lte=F('reorder_level'))[:5]
     
-    # Show expiring products only to admins
     if is_admin_or_staff(request.user):
         expiring_products = Product.objects.filter(
             is_perishable=True,
@@ -69,7 +63,7 @@ def dashboard(request):
     return render(request, 'inventory/dashboard.html', context)
 
 
-# Product Views - Employees can view, add, update (but not delete)
+
 class ProductListView(LoginRequiredMixin, ListView):
     model = Product
     template_name = 'products/product_list.html'
