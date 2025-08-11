@@ -2,8 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.db.models import Q, Sum, Count, F
-from django.core.paginator import Paginator
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponse
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
@@ -11,7 +10,10 @@ from .models import Product, Category, Supplier, StockMovement
 from .forms import ProductForm, CategoryForm, SupplierForm, StockUpdateForm, ImportForm
 from .utils import send_low_stock_alert, send_expiry_alert, export_to_csv, import_from_csv
 import csv
+from django.template.loader import render_to_string
 from datetime import datetime, timedelta
+from django.core.mail import send_mail
+from django.conf import settings
 
 
 def is_admin(user):
@@ -148,14 +150,20 @@ class ProductDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
 
 @login_required
 def update_stock(request, pk):
-    
-    product = get_object_or_404(Product, pk=pk)
+    try:
+        product = Product.objects.get(pk=pk)
+    except Product.DoesNotExist:
+        messages.error(request, 'Product not found!')
+        return redirect('inventory:product_list')
     
     if request.method == 'POST':
         form = StockUpdateForm(request.POST)
         if form.is_valid():
             movement_type = form.cleaned_data['movement_type']
             quantity = form.cleaned_data['quantity']
+            
+            old_stock = product.quantity_in_stock
+            print(f"Old stock: {old_stock}")
             
             if movement_type == 'in':
                 product.quantity_in_stock += quantity
@@ -170,6 +178,8 @@ def update_stock(request, pk):
             
             product.save()
             
+            print(f"New stock: {product.quantity_in_stock}")
+            
             StockMovement.objects.create(
                 product=product,
                 movement_type=movement_type,
@@ -178,8 +188,63 @@ def update_stock(request, pk):
                 performed_by=request.user
             )
             
-            if product.is_low_stock():
+            if product.quantity_in_stock < 10 and old_stock >= 10:
+                print(f"Low stock alert! Stock dropped below 10: {product.quantity_in_stock}")
+                try:
+                    send_mail(
+                        subject=f'LOW STOCK ALERT: {product.name}',
+                        message=f'''
+                        Low Stock Alert!
+                        
+                        Product Name: {product.name}
+                        SKU: {product.sku}
+                        Category: {product.category.name if product.category else "N/A"}
+                        Previous Stock: {old_stock}
+                        Current Stock: {product.quantity_in_stock}
+                        Reorder Level: {product.reorder_level}
+                        
+                        Stock has dropped below 10 units!
+                        Please reorder this product soon.
+                        ''',
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=['w9.200063@gmail.com'], 
+                        fail_silently=False,
+                    )
+                    print("Low stock email sent successfully!")
+                    messages.warning(request, f'⚠️ Product {product.name} is LOW ON STOCK (below 10)! Email alert sent.')
+                except Exception as e:
+                    print(f"Email error: {e}")
+                    messages.error(request, f'Email failed: {e}')
+            
+            elif product.quantity_in_stock == 0:
+                print("Product is completely out of stock!")
+                try:
+                    send_mail(
+                        subject=f'OUT OF STOCK: {product.name}',
+                        message=f'''
+                        URGENT: Product Out of Stock!
+                        
+                        Product Name: {product.name}
+                        SKU: {product.sku}
+                        Category: {product.category.name if product.category else "N/A"}
+                        Current Stock: 0
+                        
+                        This product is completely OUT OF STOCK!
+                        Immediate reorder required!
+                        ''',
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=['1vipmoh@gmail.com'], 
+                        fail_silently=False,
+                    )
+                    print("Out of stock email sent!")
+                    messages.error(request, f'🚨 Product {product.name} is COMPLETELY OUT OF STOCK!')
+                except Exception as e:
+                    print(f"Email error: {e}")
+                    messages.error(request, f'Email failed: {e}')
+            
+            elif product.is_low_stock():
                 send_low_stock_alert(product)
+                messages.warning(request, f'Product {product.name} is running low on stock.')
             
             messages.success(request, 'Stock updated successfully!')
             return redirect('inventory:product_detail', pk=pk)
@@ -345,7 +410,6 @@ def supplier_report(request):
 
 @login_required
 @user_passes_test(is_admin_or_staff)
-
 def import_products(request):
     if request.method == 'POST':
         form = ImportForm(request.POST, request.FILES)
@@ -370,22 +434,3 @@ def import_products(request):
 def export_products(request):
     products = Product.objects.select_related('category').prefetch_related('suppliers')
     return export_to_csv(products, 'products_export')
-
-
-# def update_stock(request, product_id):
-#     product = Product.objects.get(id=product_id)
-
-#     new_stock = int(request.POST.get('quantity_in_stock', product.quantity_in_stock))
-#     product.quantity_in_stock = new_stock
-#     product.save()
-
-#     # If stock is below reorder level → send email
-#     if product.quantity_in_stock <= product.reorder_level:
-#         send_low_stock_alert(
-#             product_name=product.name,
-#             sku=product.sku,
-#             quantity_in_stock=product.quantity_in_stock,
-#             reorder_level=product.reorder_level
-#         )
-
-#     return redirect('inventory:product_detail', product_id=product.id)
