@@ -154,7 +154,7 @@ class ProductDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
 
 @login_required
 def update_stock(request, pk):
-    """Employees and admins can update stock"""
+    
     product = get_object_or_404(Product, pk=pk)
     
     if request.method == 'POST':
@@ -285,7 +285,7 @@ class SupplierDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-# Report Views - Available to all logged-in users
+
 @login_required
 def inventory_report(request):
     products = Product.objects.select_related('category').prefetch_related('suppliers')
@@ -374,6 +374,24 @@ def import_products(request):
 
 @login_required
 def export_products(request):
-    """Everyone can export products"""
     products = Product.objects.select_related('category').prefetch_related('suppliers')
     return export_to_csv(products, 'products_export')
+
+
+# def update_stock(request, product_id):
+#     product = Product.objects.get(id=product_id)
+
+#     new_stock = int(request.POST.get('quantity_in_stock', product.quantity_in_stock))
+#     product.quantity_in_stock = new_stock
+#     product.save()
+
+#     # If stock is below reorder level → send email
+#     if product.quantity_in_stock <= product.reorder_level:
+#         send_low_stock_alert(
+#             product_name=product.name,
+#             sku=product.sku,
+#             quantity_in_stock=product.quantity_in_stock,
+#             reorder_level=product.reorder_level
+#         )
+
+#     return redirect('inventory:product_detail', product_id=product.id)
