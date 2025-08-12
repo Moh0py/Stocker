@@ -168,7 +168,7 @@
             </div>
 
           
-            <div class="card mb-4">
+            <!-- <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>My Statistics</h5>
                 </div>
@@ -176,13 +176,13 @@
                     <div class="row text-center">
                         <div class="col-md-4">
                             <div class="border rounded p-3">
-                                <h3 class="text-primary">{{ products_created_count }}</h3>
+                                <h3 class="text-primary">{{ total_products| default:5 }}</h3>
                                 <p class="mb-0">Products Created</p>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="border rounded p-3">
-                                <h3 class="text-success">{{ stock_movements_count|default:0 }}</h3>
+                                <h3 class="text-success">{{ stock_movements_count|default:6 }}</h3>
                                 <p class="mb-0">Stock Movements</p>
                             </div>
                         </div>
@@ -194,10 +194,10 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> -->
 
             <!-- Recent Stock Movements -->
-            {% if recent_movements %}
+            <!-- {% if recent_movements %}
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Stock Movements</h5>
@@ -242,7 +242,7 @@
             {% endif %}
         </div>
     </div>
-</div>
+</div> -->
 
 <script>
 document.getElementById('confirm_password').addEventListener('input', function() {
