@@ -43,7 +43,7 @@
         </div>
 
         <div class="col-md-9">
-            <!-- Display Messages -->
+            
             {% if messages %}
                 {% for message in messages %}
                     <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -53,7 +53,7 @@
                 {% endfor %}
             {% endif %}
 
-            <!-- About Me Section -->
+            
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-user me-2"></i>About Me</h5>
@@ -63,7 +63,7 @@
                 </div>
             </div>
 
-            <!-- Profile Information Form -->
+            
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Profile Information</h5>
@@ -107,17 +107,6 @@
                                            id="email" 
                                            value="{{ user.email }}"
                                            required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="phone_number" class="form-label">Phone Number</label>
-                                    <input type="text" 
-                                           name="phone_number" 
-                                           class="form-control" 
-                                           id="phone_number" 
-                                           value="{{ profile.phone_number|default:'' }}"
-                                           placeholder="Enter phone number">
                                 </div>
                             </div>
                         </div>
@@ -178,7 +167,7 @@
                 </div>
             </div>
 
-            <!-- Statistics Section -->
+          
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>My Statistics</h5>
@@ -187,7 +176,7 @@
                     <div class="row text-center">
                         <div class="col-md-4">
                             <div class="border rounded p-3">
-                                <h3 class="text-primary">{{ products_created_count|default:0 }}</h3>
+                                <h3 class="text-primary">{{ products_created_count }}</h3>
                                 <p class="mb-0">Products Created</p>
                             </div>
                         </div>
@@ -256,7 +245,6 @@
 </div>
 
 <script>
-// Password confirmation validation
 document.getElementById('confirm_password').addEventListener('input', function() {
     const password = document.getElementById('password').value;
     const confirmPassword = this.value;
